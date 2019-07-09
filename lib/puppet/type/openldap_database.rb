@@ -34,7 +34,11 @@ Puppet::Type.newtype(:openldap_database) do
             'mdb'
           end
         when 'Ubuntu'
-          'hdb'
+          if Facter.value(:operatingsystemmajrelease).to_i <= 15
+            'hdb'
+          else
+            'mdb'
+          end
         else
           'hdb'
         end
@@ -65,7 +69,7 @@ Puppet::Type.newtype(:openldap_database) do
     desc "Password (or hash of the password) for the rootdn."
 
     def insync?(is)
-      if should =~ /^\{(CRYPT|MD5|SMD5|SSHA|SHA)\}.+/
+      if should =~ /^\{(CRYPT|MD5|SMD5|SSHA|SHA(256|384|512)?)\}.+/
         should == is
       else
         case is
@@ -83,6 +87,18 @@ Puppet::Type.newtype(:openldap_database) do
           "{SSHA}" + Base64.encode64("#{Digest::SHA1.digest("#{should}#{salt}")}#{salt}").chomp == is
         when /^\{SHA\}.+/
           "{SHA}" + Digest::SHA1.hexdigest(should) == is
+        when /^\{(SHA(256|384|512))\}/
+          matches = is.match("^\{(SHA[\\d]{,3})\}")
+          raise ArgumentError, "Invalid password format: #{is}" if matches.nil?
+          crypto = matches[1]
+          case crypto
+          when 'SHA256'
+            '{SHA256}' + Digest::SHA256.hexdigest(should) == is
+          when 'SHA384'
+            '{SHA384}' + Digest::SHA384.hexdigest(should) == is
+          when 'SHA512'
+            '{SHA512}' + Digest::SHA512.hexdigest(should) == is
+          end
         else
           false
         end
@@ -92,7 +108,7 @@ Puppet::Type.newtype(:openldap_database) do
     def sync
       require 'securerandom'
       salt = SecureRandom.random_bytes(4)
-      if should =~ /^\{(CRYPT|MD5|SMD5|SSHA|SHA)\}.+/
+      if should =~ /^\{(CRYPT|MD5|SMD5|SSHA|SHA(256|384|512)?)\}.+/
         @resource[:rootpw] = should
       else
         @resource[:rootpw] = "{SSHA}" + Base64.encode64("#{Digest::SHA1.digest("#{should}#{salt}")}#{salt}").chomp
@@ -135,6 +151,10 @@ Puppet::Type.newtype(:openldap_database) do
 
   newproperty(:sizelimit) do
     desc "Specifies the maximum number of entries to return from a search operation."
+  end
+
+  newproperty(:dbmaxsize) do
+    desc "Specifies the maximum size of the DB in bytes."
   end
 
   newproperty(:timelimit) do
@@ -187,7 +207,7 @@ Puppet::Type.newtype(:openldap_database) do
     desc "Limits the number entries returned and/or the time spent by a request"
 
     validate do |value|
-      if value !~ /^(\*|anonymous|users|self|(dn(\.\S+)?=\S+)|(dn\.\S+=\S+)|(group(\/oc(\/at)?)?=\S+))(\s+((time(\.(soft|hard))?=((\d+)|unlimited))|(size(\.(soft|hard|unchecked))?=((\d+)|unlimited))|(size\.pr=((\d+)|noEstimate|unlimited))|(size.prtotal=((\d+)|unlimited|disabled))))+$/
+      if value !~ /^(\*|anonymous|users|self|(dn(\.\S+)?=\S+)|(dn\.\S+=\S+)|(group(\/\S+(\/\S+)?)?=\S+))(\s+((time(\.(soft|hard))?=((\d+)|unlimited))|(size(\.(soft|hard|unchecked))?=((\d+)|unlimited))|(size\.pr=((\d+)|noEstimate|unlimited))|(size.prtotal=((\d+)|unlimited|disabled))))+$/
         raise ArgumentError, "Invalid limit: #{value}\nLimit values must be according to syntax described at http://www.openldap.org/doc/admin24/limits.html#Per-Database%20Limits"
       end
     end

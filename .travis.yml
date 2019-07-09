@@ -13,28 +13,10 @@ script: ["bundle exec rake validate", "bundle exec rake lint", "bundle exec rake
 matrix:
   fast_finish: true
   include:
-  - rvm: 1.9.3
-    env: PUPPET_GEM_VERSION="~> 3.0"
-  - rvm: 2.0.0
-    env: PUPPET_GEM_VERSION="~> 3.0"
-  - rvm: 2.0.0
-    env: PUPPET_GEM_VERSION="~> 3.0" FUTURE_PARSER="yes"
   - rvm: 2.1.9
     env: PUPPET_GEM_VERSION="~> 4.0"
-  - rvm: default
-    sudo: required
-    dist: trusty
-    services: docker
-    env: BEAKER_set="debian-6"
-    bundler_args:
-    script: sudo service docker restart ; sleep 10 && bundle exec rspec spec/acceptance/*_spec.rb
-  - rvm: default
-    sudo: required
-    dist: trusty
-    services: docker
-    env: BEAKER_set="debian-7"
-    bundler_args:
-    script: sudo service docker restart ; sleep 10 && bundle exec rspec spec/acceptance/*_spec.rb
+  - rvm: 2.4.1
+    env: PUPPET_GEM_VERSION="~> 5.0"
   - rvm: default
     sudo: required
     dist: trusty
@@ -46,7 +28,21 @@ matrix:
     sudo: required
     dist: trusty
     services: docker
+    env: BEAKER_set="debian-9"
+    bundler_args:
+    script: sudo service docker restart ; sleep 10 && bundle exec rspec spec/acceptance/*_spec.rb
+  - rvm: default
+    sudo: required
+    dist: trusty
+    services: docker
     env: BEAKER_set="ubuntu-14.04"
+    bundler_args:
+    script: sudo service docker restart ; sleep 10 && bundle exec rspec spec/acceptance/*_spec.rb
+  - rvm: default
+    sudo: required
+    dist: trusty
+    services: docker
+    env: BEAKER_set="ubuntu-16.04"
     bundler_args:
     script: sudo service docker restart ; sleep 10 && bundle exec rspec spec/acceptance/*_spec.rb
   - rvm: default

@@ -42,6 +42,30 @@ describe 'openldap::client::config' do
         end
       end
 
+      context 'with base set to absent' do
+        let :pre_condition do
+          "class {'openldap::client': base => 'absent', }"
+        end
+
+        it { is_expected.to compile.with_all_deps }
+        it { is_expected.to contain_class('openldap::client::config') }
+        it { is_expected.to contain_augeas('ldap.conf') }
+        case facts[:osfamily]
+        when 'Debian'
+          it { is_expected.to contain_augeas('ldap.conf').with({
+            :incl    => '/etc/ldap/ldap.conf',
+            :changes => [ 'rm BASE' ],
+          })
+          }
+        when 'RedHat'
+          it { is_expected.to contain_augeas('ldap.conf').with({
+            :incl    => '/etc/openldap/ldap.conf',
+            :changes => [ 'rm BASE' ],
+          })
+          }
+        end
+      end
+
       context 'with bind_policy set' do
         let :pre_condition do
           "class {'openldap::client': bind_policy => 'soft', }"
@@ -157,6 +181,30 @@ describe 'openldap::client::config' do
           it { is_expected.to contain_augeas('ldap.conf').with({
             :incl    => '/etc/openldap/ldap.conf',
             :changes => [ 'set LDAP_VERSION 3' ],
+          })
+          }
+        end
+      end
+
+      context 'with network_timeout set' do
+        let :pre_condition do
+          "class {'openldap::client': network_timeout => '1', }"
+        end
+
+        it { is_expected.to compile.with_all_deps }
+        it { is_expected.to contain_class('openldap::client::config') }
+        it { is_expected.to contain_augeas('ldap.conf') }
+        case facts[:osfamily]
+        when 'Debian'
+          it { is_expected.to contain_augeas('ldap.conf').with({
+            :incl    => '/etc/ldap/ldap.conf',
+            :changes => [ 'set NETWORK_TIMEOUT 1' ],
+          })
+          }
+        when 'RedHat'
+          it { is_expected.to contain_augeas('ldap.conf').with({
+            :incl    => '/etc/openldap/ldap.conf',
+            :changes => [ 'set NETWORK_TIMEOUT 1' ],
           })
           }
         end
@@ -522,14 +570,6 @@ describe 'openldap::client::config' do
         end
       end
 
-      context 'with an invalid tls_cacert set' do
-        let :pre_condition do
-          "class {'openldap::client': tls_cacert => 'foo', }"
-        end
-
-        it { expect { is_expected.to compile }.to raise_error(/\"foo\" is not an absolute path/) }
-      end
-
       context 'with a valid tls_cacert set' do
         let :pre_condition do
           "class {'openldap::client': tls_cacert => '/etc/ssl/certs/ca-certificates.crt', }"
@@ -551,14 +591,6 @@ describe 'openldap::client::config' do
           })
           }
         end
-      end
-
-      context 'with an invalid tls_cacertdir set' do
-        let :pre_condition do
-          "class {'openldap::client': tls_cacertdir => 'foo', }"
-        end
-
-        it { expect { is_expected.to compile }.to raise_error(/\"foo\" is not an absolute path/) }
       end
 
       context 'with a valid tls_cacertdir set' do
@@ -628,6 +660,76 @@ describe 'openldap::client::config' do
           it { is_expected.to contain_augeas('ldap.conf').with({
             :incl    => '/etc/openldap/ldap.conf',
             :changes => [ 'set TLS_REQCERT never' ],
+          })
+          }
+        end
+      end
+
+      context 'with sasl options set' do
+        let :pre_condition do
+          "class {'openldap::client':
+                   sasl_mech => 'gssapi',
+                   sasl_realm => 'TEST.REALM',
+                   sasl_authcid => 'dn:uid=test,cn=mech,cn=authzid',
+                   sasl_secprops => ['noplain','noactive'],
+                   sasl_nocanon => true,
+           }"
+        end
+
+        it { is_expected.to compile.with_all_deps }
+        it { is_expected.to contain_class('openldap::client::config') }
+        it { is_expected.to contain_augeas('ldap.conf') }
+        case facts[:osfamily]
+        when 'Debian'
+          it { is_expected.to contain_augeas('ldap.conf').with({
+            :incl    => '/etc/ldap/ldap.conf',
+            :changes => [ 'set SASL_MECH gssapi',
+                          'set SASL_REALM TEST.REALM',
+                          'set SASL_AUTHCID dn:uid=test,cn=mech,cn=authzid',
+                          'set SASL_SECPROPS noplain,noactive',
+                          'set SASL_NOCANON true'],
+          })
+          }
+        when 'RedHat'
+          it { is_expected.to contain_augeas('ldap.conf').with({
+            :incl    => '/etc/openldap/ldap.conf',
+            :changes => [ 'set SASL_MECH gssapi',
+                          'set SASL_REALM TEST.REALM',
+                          'set SASL_AUTHCID dn:uid=test,cn=mech,cn=authzid',
+                          'set SASL_SECPROPS noplain,noactive',
+                          'set SASL_NOCANON true'],
+          })
+          }
+        end
+      end
+
+      context 'with gssapi options set' do
+        let :pre_condition do
+          "class {'openldap::client':
+                   gssapi_sign => false,
+                   gssapi_encrypt => true,
+                   gssapi_allow_remote_principal => 'on'
+           }"
+        end
+
+        it { is_expected.to compile.with_all_deps }
+        it { is_expected.to contain_class('openldap::client::config') }
+        it { is_expected.to contain_augeas('ldap.conf') }
+        case facts[:osfamily]
+        when 'Debian'
+          it { is_expected.to contain_augeas('ldap.conf').with({
+            :incl    => '/etc/ldap/ldap.conf',
+            :changes => [ 'set GSSAPI_SIGN false',
+                          'set GSSAPI_ENCRYPT true',
+                          'set GSSAPI_ALLOW_REMOTE_PRINCIPAL on'],
+          })
+          }
+        when 'RedHat'
+          it { is_expected.to contain_augeas('ldap.conf').with({
+            :incl    => '/etc/openldap/ldap.conf',
+            :changes => [ 'set GSSAPI_SIGN false',
+                          'set GSSAPI_ENCRYPT true',
+                          'set GSSAPI_ALLOW_REMOTE_PRINCIPAL on'],
           })
           }
         end

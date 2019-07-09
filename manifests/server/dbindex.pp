@@ -2,7 +2,7 @@
 define openldap::server::dbindex(
   $ensure    = undef,
   $suffix    = undef,
-  $attribute = undef,
+  $attribute = $name,
   $indices   = undef,
 ) {
 
@@ -11,13 +11,13 @@ define openldap::server::dbindex(
   }
 
   if $::openldap::server::provider == 'augeas' {
-    Class['openldap::server::install'] ->
-    Openldap::Server::Dbindex[$title] ~>
-    Class['openldap::server::service']
+    Class['openldap::server::install']
+    -> Openldap::Server::Dbindex[$title]
+    ~> Class['openldap::server::service']
   } else {
-    Class['openldap::server::service'] ->
-    Openldap::Server::Dbindex[$title] ->
-    Class['openldap::server']
+    Class['openldap::server::service']
+    -> Openldap::Server::Dbindex[$title]
+    -> Class['openldap::server']
   }
 
   openldap_dbindex { $title:

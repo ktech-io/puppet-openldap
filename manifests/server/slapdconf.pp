@@ -30,8 +30,6 @@ class openldap::server::slapdconf {
 
   if $::openldap::server::ssl_cert {
     if $::openldap::server::ssl_key {
-      validate_absolute_path($::openldap::server::ssl_cert)
-      validate_absolute_path($::openldap::server::ssl_key)
       openldap::server::globalconf { 'TLSCertificate':
         value => {
           'TLSCertificateFile'    => $::openldap::server::ssl_cert,
@@ -39,7 +37,6 @@ class openldap::server::slapdconf {
         },
       }
       if $::openldap::server::ssl_ca {
-        validate_absolute_path($::openldap::server::ssl_ca)
         openldap::server::globalconf { 'TLSCACertificateFile':
           value => $::openldap::server::ssl_ca,
         }
@@ -51,8 +48,10 @@ class openldap::server::slapdconf {
     fail 'You must specify a ssl_cert'
   }
 
-  openldap::server::database { 'dc=my-domain,dc=com':
-    ensure => absent,
+  if $::osfamily == 'Debian' {
+    openldap::server::database { 'dc=my-domain,dc=com':
+      ensure => absent,
+    }
   }
 
   create_resources('openldap::server::database', $::openldap::server::databases)
